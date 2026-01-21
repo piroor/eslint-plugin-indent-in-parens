@@ -48,6 +48,8 @@ module.exports = {
                 const token = allTokens[i];
                 const tokenLine = token.loc.start.line;
 
+                let effectiveEndColumn = token.loc.end.column;
+
                 // If this token is on a new line compared to the previous one
                 if (tokenLine > lastTokenLine) {
                     // Check if it's the first token on the line
@@ -60,6 +62,9 @@ module.exports = {
                         // If expectedIndent is null, it means we are in a block that should be ignored (standard indent)
                         if (expectedIndent !== null) {
                             if (token.loc.start.column < expectedIndent) {
+                                // We will fix this to expectedIndent, so calculate effective end column based on that
+                                effectiveEndColumn = token.loc.end.column + (expectedIndent - token.loc.start.column);
+
                                 context.report({
                                     node: token,
                                     loc: token.loc,
@@ -69,16 +74,8 @@ module.exports = {
                                         actual: token.loc.start.column
                                     },
                                     fix(fixer) {
-                                        const diff = expectedIndent - token.loc.start.column;
-                                        if (diff > 0) {
-                                            return fixer.insertTextBefore(token, ' '.repeat(diff));
-                                        }
-                                        else {
-                                            return fixer.removeRange([
-                                                token.range[0] - (token.loc.start.column - expectedIndent),
-                                                token.range[0]
-                                            ]);
-                                        }
+                                        const lineStart = sourceCode.getIndexFromLoc({ line: token.loc.start.line, column: 0 });
+                                        return fixer.replaceTextRange([lineStart, token.range[0]], ' '.repeat(expectedIndent));
                                     }
                                 });
                             }
@@ -98,12 +95,12 @@ module.exports = {
                         }
                         else {
                             // Next token is on same line. Enforce alignment to the end of this paren (or start of next token).
-                            indentStack.push(token.loc.end.column);
+                            indentStack.push(effectiveEndColumn);
                         }
                     }
                     else {
                         // End of tokens? Should usually not happen if scanned properly.
-                        indentStack.push(token.loc.end.column);
+                        indentStack.push(effectiveEndColumn);
                     }
                 }
                 else if (token.value === ')') {
