@@ -2,6 +2,8 @@
 
 Enforce indent alignment after opening parenthesis in control statements.
 
+This plugin is created with Google Antigravity (Geminit 3 Pro (High)).
+
 ## Installation
 
 You'll first need to install [ESLint](https://eslint.org/):
