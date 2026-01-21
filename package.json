@@ -17,6 +17,10 @@
         "url": "https://github.com/piroor/eslint-plugin-indent-in-parens/issues"
     },
     "homepage": "https://github.com/piroor/eslint-plugin-indent-in-parens#readme"
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/piroor/eslint-plugin-indent-in-parens.git"
+    },
     "engines": {
         "node": ">=20.0.0"
     },
