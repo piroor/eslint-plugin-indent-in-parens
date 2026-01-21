@@ -9,7 +9,7 @@
         "eslint-plugin"
     ],
     "author": "Piro",
-    "license": "MPL-2.0",
+    "license": "MIT",
     "engines": {
         "node": ">=20.0.0"
     },
