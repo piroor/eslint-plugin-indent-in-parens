@@ -2,6 +2,9 @@
     "name": "eslint-plugin-indent-in-parens",
     "version": "1.0.0",
     "description": "Enforce indent alignment after opening parenthesis",
+    "scripts": {
+        "test": "mocha tests/**/*.js"
+    },
     "main": "index.js",
     "keywords": [
         "eslint",
