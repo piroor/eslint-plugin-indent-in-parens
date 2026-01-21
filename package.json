@@ -1,0 +1,23 @@
+{
+    "name": "eslint-plugin-indent-in-parens",
+    "version": "1.0.0",
+    "description": "Enforce indent alignment after opening parenthesis",
+    "main": "index.js",
+    "keywords": [
+        "eslint",
+        "eslintplugin",
+        "eslint-plugin"
+    ],
+    "author": "Piro",
+    "license": "MPL-2.0",
+    "engines": {
+        "node": ">=20.0.0"
+    },
+    "devDependencies": {
+        "eslint": ">=9.0.0",
+        "mocha": "^10.0.0"
+    },
+    "peerDependencies": {
+        "eslint": ">=9.0.0"
+    }
+}
