@@ -11,8 +11,12 @@
         "eslintplugin",
         "eslint-plugin"
     ],
-    "author": "Piro",
+    "author": "YUKI \"Piro\" Hiroshi",
     "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/piroor/eslint-plugin-indent-in-parens/issues"
+    },
+    "homepage": "https://github.com/piroor/eslint-plugin-indent-in-parens#readme"
     "engines": {
         "node": ">=20.0.0"
     },
