@@ -27,17 +27,17 @@ module.exports = {
             const allTokens = [startToken, ...tokens, endToken];
 
             // Stack to hold the valid indentations.
-            // Each entry is the column index where the next line should start.
+            // Each entry is { indent: number | null, type: string | null }
             const indentStack = [];
 
             // Push the initial control statement paren
             if (startToken.value === '(') {
                 // Check if the FIRST token inside the range (allTokens[1]) is on a new line
                 if (allTokens.length > 1 && allTokens[1].loc.start.line > startToken.loc.start.line) {
-                    indentStack.push(null);
+                    indentStack.push({ indent: null, type: 'PAREN' });
                 }
                 else {
-                    indentStack.push(startToken.loc.end.column);
+                    indentStack.push({ indent: startToken.loc.end.column, type: 'PAREN' });
                 }
             }
 
@@ -58,10 +58,12 @@ module.exports = {
 
                     // Only check indentation if it's the first token on the line (only whitespace before)
                     if (/^\s*$/.test(lineStartContext) && indentStack.length > 0) {
-                        const expectedIndent = indentStack[indentStack.length - 1];
+                        const stackTop = indentStack[indentStack.length - 1];
+                        const expectedIndent = stackTop.indent;
+
                         // If expectedIndent is null, it means we are in a block that should be ignored (standard indent)
                         if (expectedIndent !== null) {
-                            if (token.loc.start.column < expectedIndent) {
+                            if (token.loc.start.column !== expectedIndent) {
                                 // We will fix this to expectedIndent, so calculate effective end column based on that
                                 effectiveEndColumn = token.loc.end.column + (expectedIndent - token.loc.start.column);
 
@@ -91,35 +93,84 @@ module.exports = {
                         if (nextToken.loc.start.line > token.loc.start.line) {
                             // Next token is on a new line. 
                             // We do NOT enforce alignment column for this block.
-                            indentStack.push(null);
+                            indentStack.push({ indent: null, type: 'PAREN' });
                         }
                         else {
                             // Next token is on same line. Enforce alignment to the end of this paren (or start of next token).
-                            indentStack.push(effectiveEndColumn);
+                            indentStack.push({ indent: effectiveEndColumn, type: 'PAREN' });
                         }
                     }
                     else {
                         // End of tokens? Should usually not happen if scanned properly.
-                        indentStack.push(effectiveEndColumn);
+                        indentStack.push({ indent: effectiveEndColumn, type: 'PAREN' });
                     }
                 }
                 else if (token.value === ')') {
+                    // Pop any ternary frames before popping paren
+                    while (indentStack.length > 0 && indentStack[indentStack.length - 1].type === 'TERNARY') {
+                        indentStack.pop();
+                    }
                     indentStack.pop();
                 }
                 else if (token.value === '{') {
-                    // Start of a block (function body, object literal, etc.)
-                    // Usually we want standard indentation here, not alignment to the parens.
-                    indentStack.push(null);
+                    indentStack.push({ indent: null, type: 'BLOCK' });
                 }
                 else if (token.value === '}') {
+                    // Pop any ternary frames before popping block
+                    while (indentStack.length > 0 && indentStack[indentStack.length - 1].type === 'TERNARY') {
+                        indentStack.pop();
+                    }
                     indentStack.pop();
                 }
                 else if (token.value === '[') {
-                    // Start of an array literal etc.
-                    indentStack.push(null);
+                    indentStack.push({ indent: null, type: 'ARRAY' });
                 }
                 else if (token.value === ']') {
+                    // Pop any ternary frames before popping array
+                    while (indentStack.length > 0 && indentStack[indentStack.length - 1].type === 'TERNARY') {
+                        indentStack.pop();
+                    }
                     indentStack.pop();
+                }
+                else if (token.value === '?') {
+                    // Start of ternary?
+                    // Need to verify it's not ?. (optional chaining) or ?? (nullish coalescing)
+                    // The token.value for ?. is usually separate depending on parser, but standard token value for ? is just ?.
+                    // However, we should check if source code actually has `?.` or `??`.
+                    const nextToken = sourceCode.getTokenAfter(token);
+                    const isOptionalChaining = nextToken && nextToken.value === '.' && token.range[1] === nextToken.range[0];
+                    const isNullish = nextToken && nextToken.value === '?' && token.range[1] === nextToken.range[0];
+
+                    if (!isOptionalChaining && !isNullish) {
+                        const stackTop = indentStack[indentStack.length - 1];
+                        if (stackTop && stackTop.indent !== null) {
+                            indentStack.push({ indent: stackTop.indent + 2, type: 'TERNARY' });
+                        } else {
+                            indentStack.push({ indent: null, type: 'TERNARY' });
+                        }
+                    }
+                }
+                else if (token.value === ':') {
+                    // Ternary else or object property?
+                    // If we are in a TERNARY frame, it's likely the else part of ternary.
+                    // But could be { key: value }.
+                    // If top is TERNARY, we just continue it (pop and push effectively same or similar).
+                    // Actually for `cond ? true : false`, indent should be same for true and false branches relative to cond?
+                    // The requirement is "+2 spaces". 
+                    // `cond ? \n  true : \n  false`
+                    // If we are in TERNARY, the indent is already +2.
+                    // IMPORTANT: nested ternaries. `a ? b ? c : d : e`
+                    // When we hit `:`, we check if it matches the current `?`.
+
+                    // If top is TERNARY, we stay in TERNARY.
+                    // But if we encounter comma `,`, we should probably exit ternary?
+                    // `[ a ? b : c, ... ]`
+                }
+                else if (token.value === ',' || token.value === ';') {
+                    // End of expression likely. Pop all TERNARY frames.
+                    while (indentStack.length > 0 && indentStack[indentStack.length - 1].type === 'TERNARY') {
+                        indentStack.pop();
+                    }
                 }
 
                 lastTokenLine = tokenLine;
