@@ -97,6 +97,19 @@ for (const [lastIds, currentIds, place] of [
         {
             options: [2],
             code: `
+if (bestFrom + bestSize < fromEnd &&
+    bestTo + bestSize < toEnd &&
+    (shouldJunk ?
+       this.junks[this.to[bestTo + bestSize]] :
+       !this.junks[this.to[bestTo + bestSize]]) &&
+    this.from[bestFrom + bestSize] == this.to[bestTo + bestSize]) {
+}
+`
+        },
+        // Ternary relaxed alignment (+2 indent)
+        {
+            options: [2],
+            code: `
 while (bestFrom + bestSize < fromEnd &&
        bestTo + bestSize < toEnd &&
        (shouldJunk ?
@@ -160,6 +173,32 @@ function test() {
 }
 `,
             errors: [{ messageId: 'wrongAlignment' }]
+        },
+        // Ternary incorrect alignment (should be +2)
+        {
+            options: [2],
+            code: `
+if (bestFrom + bestSize < fromEnd &&
+    bestTo + bestSize < toEnd &&
+    (shouldJunk ?
+     this.junks[this.to[bestTo + bestSize]] :
+     !this.junks[this.to[bestTo + bestSize]]) &&
+    this.from[bestFrom + bestSize] == this.to[bestTo + bestSize]) {
+}
+`,
+            output: `
+if (bestFrom + bestSize < fromEnd &&
+    bestTo + bestSize < toEnd &&
+    (shouldJunk ?
+       this.junks[this.to[bestTo + bestSize]] :
+       !this.junks[this.to[bestTo + bestSize]]) &&
+    this.from[bestFrom + bestSize] == this.to[bestTo + bestSize]) {
+}
+`,
+            errors: [
+                { messageId: 'wrongAlignment' },
+                { messageId: 'wrongAlignment' }
+            ]
         },
         // Ternary incorrect alignment (should be +2)
         {
