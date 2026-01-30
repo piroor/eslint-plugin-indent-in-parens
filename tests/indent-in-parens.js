@@ -14,6 +14,7 @@ ruleTester.run('indent-in-parens', rule, {
     valid: [
         // Basic aligned examples
         {
+            options: [2],
             code: `
 if (options.force ||
     raw?.type == TreeItem.TYPE_GROUP_COLLAPSED_MEMBERS_COUNTER) {
@@ -21,6 +22,7 @@ if (options.force ||
 `
         },
         {
+            options: [2],
             code: `
 if (internalOrder.join('\\n') == actualOrder.join('\\n') &&
     internalOrder.join('\\n') == nativeOrder.join('\\n')) {
@@ -28,6 +30,7 @@ if (internalOrder.join('\\n') == actualOrder.join('\\n') &&
 `
         },
         {
+            options: [2],
             code: `
 if (insertBefore &&
     nextElement === undefined &&
@@ -37,6 +40,7 @@ if (insertBefore &&
 `
         },
         {
+            options: [2],
             code: `
 if (shouldApplyAnimation() &&
     item.$TST.states.has(Constants.kTAB_STATE_EXPANDING) &&
@@ -46,6 +50,7 @@ if (shouldApplyAnimation() &&
         },
         // Return statements
         {
+            options: [2],
             code: `
 function test() {
   return (message.type != \`treestyletab:\${TabPreviewPanel.TYPE}:show\` ||
@@ -55,6 +60,7 @@ function test() {
         },
         // Return statement with newline (should be ignored by this rule)
         {
+            options: [2],
             code: `
 function test() {
   return (
@@ -66,6 +72,7 @@ function test() {
         },
         // Block scopes (should be ignored)
         {
+            options: [2],
             code: `
 if (
     tabIds.every(id => {
@@ -77,6 +84,7 @@ if (
         },
         // Array literals (should be ignored)
         {
+            options: [2],
             code: `
 for (const [lastIds, currentIds, place] of [
   [[...mLastStickyItemIdsAbove], [...stickyItemIdsAbove], 'above'],
@@ -87,6 +95,7 @@ for (const [lastIds, currentIds, place] of [
         },
         // Ternary relaxed alignment (+2 indent)
         {
+            options: [2],
             code: `
 while (bestFrom + bestSize < fromEnd &&
        bestTo + bestSize < toEnd &&
@@ -101,6 +110,7 @@ while (bestFrom + bestSize < fromEnd &&
 
     invalid: [
         {
+            options: [2],
             code: `
 if (options.force ||
   raw?.type == TreeItem.TYPE_GROUP_COLLAPSED_MEMBERS_COUNTER) {
@@ -114,6 +124,7 @@ if (options.force ||
             errors: [{ messageId: 'wrongAlignment' }]
         },
         {
+            options: [2],
             code: `
 if (insertBefore &&
   nextElement === undefined &&
@@ -135,6 +146,7 @@ if (insertBefore &&
             ]
         },
         {
+            options: [2],
             code: `
 function test() {
   return (message.type != \`treestyletab:\${TabPreviewPanel.TYPE}:show\` ||
@@ -151,6 +163,7 @@ function test() {
         },
         // Ternary incorrect alignment (should be +2)
         {
+            options: [2],
             code: `
 while (bestFrom + bestSize < fromEnd &&
        bestTo + bestSize < toEnd &&

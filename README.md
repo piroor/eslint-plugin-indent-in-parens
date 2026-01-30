@@ -36,10 +36,13 @@ Then configure the rules you want to use under the rules section.
 ```json
 {
     "rules": {
-        "indent-in-parens/indent-in-parens": "error"
+        "indent-in-parens/indent-in-parens": ["error", 2]
     }
 }
 ```
+
+The first option is the indentation size (default: 4). This is used to calculate the correct indentation for ternary operators inside parentheses.
+
 
 ## Rules
 

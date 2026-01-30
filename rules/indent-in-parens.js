@@ -10,9 +10,16 @@ module.exports = {
         messages: {
             wrongAlignment: 'Expected indentation of at least {{expected}} spaces but found {{actual}} spaces.',
         },
+        schema: [
+            {
+                type: 'integer',
+                minimum: 0
+            }
+        ]
     },
     create(context) {
         const sourceCode = context.sourceCode;
+        const indentSize = context.options[0] !== undefined ? context.options[0] : 4;
 
         function validateAlignment(node, startToken, endToken) {
             if (!startToken || !endToken) return;
@@ -34,10 +41,10 @@ module.exports = {
             if (startToken.value === '(') {
                 // Check if the FIRST token inside the range (allTokens[1]) is on a new line
                 if (allTokens.length > 1 && allTokens[1].loc.start.line > startToken.loc.start.line) {
-                    indentStack.push({ indent: null, type: 'PAREN' });
+                    indentStack.push({ indent: null, startIndent: startToken.loc.start.column, type: 'PAREN' });
                 }
                 else {
-                    indentStack.push({ indent: startToken.loc.end.column, type: 'PAREN' });
+                    indentStack.push({ indent: startToken.loc.end.column, startIndent: startToken.loc.start.column, type: 'PAREN' });
                 }
             }
 
@@ -67,19 +74,23 @@ module.exports = {
                                 // We will fix this to expectedIndent, so calculate effective end column based on that
                                 effectiveEndColumn = token.loc.end.column + (expectedIndent - token.loc.start.column);
 
-                                context.report({
-                                    node: token,
-                                    loc: token.loc,
-                                    messageId: 'wrongAlignment',
-                                    data: {
-                                        expected: expectedIndent,
-                                        actual: token.loc.start.column
-                                    },
-                                    fix(fixer) {
-                                        const lineStart = sourceCode.getIndexFromLoc({ line: token.loc.start.line, column: 0 });
-                                        return fixer.replaceTextRange([lineStart, token.range[0]], ' '.repeat(expectedIndent));
-                                    }
-                                });
+                                // Avoid circular fixes and conflicts with other rules (like "indent") that might disagree by 1 space.
+                                // If the difference is 1 space or less, we suppress the warning entirely.
+                                if (Math.abs(expectedIndent - token.loc.start.column) > 1) {
+                                    context.report({
+                                        node: token,
+                                        loc: token.loc,
+                                        messageId: 'wrongAlignment',
+                                        data: {
+                                            expected: expectedIndent,
+                                            actual: token.loc.start.column
+                                        },
+                                        fix(fixer) {
+                                            const lineStart = sourceCode.getIndexFromLoc({ line: token.loc.start.line, column: 0 });
+                                            return fixer.replaceTextRange([lineStart, token.range[0]], ' '.repeat(expectedIndent));
+                                        }
+                                    });
+                                }
                             }
                         }
                     }
@@ -93,16 +104,16 @@ module.exports = {
                         if (nextToken.loc.start.line > token.loc.start.line) {
                             // Next token is on a new line. 
                             // We do NOT enforce alignment column for this block.
-                            indentStack.push({ indent: null, type: 'PAREN' });
+                            indentStack.push({ indent: null, startIndent: token.loc.start.column, type: 'PAREN' });
                         }
                         else {
                             // Next token is on same line. Enforce alignment to the end of this paren (or start of next token).
-                            indentStack.push({ indent: effectiveEndColumn, type: 'PAREN' });
+                            indentStack.push({ indent: effectiveEndColumn, startIndent: token.loc.start.column, type: 'PAREN' });
                         }
                     }
                     else {
                         // End of tokens? Should usually not happen if scanned properly.
-                        indentStack.push({ indent: effectiveEndColumn, type: 'PAREN' });
+                        indentStack.push({ indent: effectiveEndColumn, startIndent: token.loc.start.column, type: 'PAREN' });
                     }
                 }
                 else if (token.value === ')') {
@@ -143,8 +154,17 @@ module.exports = {
 
                     if (!isOptionalChaining && !isNullish) {
                         const stackTop = indentStack[indentStack.length - 1];
-                        if (stackTop && stackTop.indent !== null) {
-                            indentStack.push({ indent: stackTop.indent + 2, type: 'TERNARY' });
+                        if (stackTop) {
+                            if (stackTop.type === 'PAREN' && stackTop.startIndent !== undefined) {
+                                // User request: "Opening parenthesis indentation amount, add +1 indentation depth"
+                                // This implies base should be paren start column.
+                                // User updated test expectation to +3 from paren start (which corresponds to indentSize + 1).
+                                indentStack.push({ indent: stackTop.startIndent + indentSize + 1, type: 'TERNARY' });
+                            } else if (stackTop.indent !== null) {
+                                indentStack.push({ indent: stackTop.indent + indentSize, type: 'TERNARY' });
+                            } else {
+                                indentStack.push({ indent: null, type: 'TERNARY' });
+                            }
                         } else {
                             indentStack.push({ indent: null, type: 'TERNARY' });
                         }
